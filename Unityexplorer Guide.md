@@ -1,129 +1,104 @@
-# UnityExplorer - In-Game UI for Unity Games
+# Hacking IL2CPP Games with MelonLoader
 
-**UnityExplorer** is an in-game user interface designed for **exploring, debugging, and modifying IL2CPP and Mono Unity games**. It supports most Unity versions from 5.2 to 2021+ and is powered by UniverseLib.
+## Introduction
 
----
+Hacking IL2CPP games has never before been simpler than with
+MelonLoader. MelonLoader allows you to run your own C# code inside an
+IL2CPP game, making it almost trivial to enumerate objects, change their
+properties, and call their methods. The integration of both MGUI and
+HarmonyX allows for rapid GUI development and simple method hooking.
 
-## Key Features
+## What is IL2CPP?
 
-* **Inspector API**
-  Inspect objects or types from outside the C# console using the `InspectorManager` class.
-  Example:
+IL2CPP (Intermediate Language to C++) is a Unity scripting backend that
+aims to provide wider platform support for Unity games.\
+It takes your C# code, converts it into Microsoft Intermediate Language
+(MSIL), and then to C++.\
+IL2CPP unintentionally makes hacking Unity games more difficult since
+C++ code cannot be accurately decompiled and doesn't preserve symbol
+information. Luckily, IL2CPP games ship with metadata that can be mapped
+to game code, allowing you to examine a game's structure.
 
-  ```csharp
-  UnityExplorer.InspectorManager.Inspect(theObject); // Inspect an object
-  UnityExplorer.InspectorManager.Inspect(typeof(SomeClass)); // Inspect a type
-  ```
+## Installing MelonLoader
 
-* **Object Explorer**
+1.  Download the latest version of the installer from the GitHub
+    releases page.\
+2.  Open the installer and browse to the directory containing your
+    game's executable.\
+3.  Leave all settings as default and press **Install**.\
+4.  If successful, click **OK** and MelonLoader will be installed.
 
-  * **Scene Explorer Tab**: Browse active scenes, including `DontDestroyOnLoad` and `HideAndDontSave` objects.
+## Unity Explorer
 
-    * "HideAndDontSave" contains flagged objects plus assets/resources not in any scene.
-    * Scene Loader allows loading scenes in the build (may not work for Unity 5.X).
-  * **Object Search Tab**: Search for Unity objects, GameObjects, Components, C# Singletons, or Static Classes.
+Unity Explorer is an in-game GUI that lets you explore scenes and
+objects, execute code, hook functions, and more.
 
-* **Inspector**
-  View detailed object information, manipulate values, and inspect C# classes with reflection.
+### Installation
 
-  * **GameObject Inspector `[G]`**: Inspect GameObjects, transforms, and components.
-  * **Reflection Inspectors `[R]`/`[S]`**: Inspect other objects; supports Texture2D, Image, Sprite, Material (View/Save as PNG), AudioClip (Play/Save as WAV).
+-   Download the correct release version of Unity Explorer for
+    MelonLoader IL2CPP games.\
+-   Run the game once, then extract all UnityExplorer files into the
+    root game directory.\
+-   Launch the game; the UnityExplorer UI should appear automatically
+    (press **F7** if not).
 
-* **C# Console**
-  Run REPL code or define temporary classes using `Mono.CSharp.Evaluator`.
+### Features
 
-  * Automatic startup script: `startup.cs` in `sinai-dev-UnityExplorer\Scripts\`.
-  * Clipboard helpers: `Copy(obj)` and `Paste()`.
+-   **Object Explorer**: View the game's structure in a tree view.\
+-   **Inspector**: View detailed information about object instances.\
+-   **Console**: Execute custom C# code in-game.\
+-   **Hooks Window**: Enumerate methods, create hooks, and toggle them
+    on/off.
 
-* **Hook Manager**
-  Hook methods with a click for debugging. Edit generated hook source. Accepted hook types: `Prefix`, `Postfix`, `Finalizer`, `Transpiler`.
+## Reverse Engineering IL2CPP Games
 
-* **Mouse-Inspect**
-  Inspect objects under the mouse:
+### Using dnSpy
 
-  * **World**: Uses `Physics.Raycast`.
-  * **UI**: Uses `GraphicRaycasters`.
+-   Open dummy DLLs generated in `MelonLoader/Managed`.\
+-   Inspect classes/methods, but expect missing code since IL2CPP strips
+    most symbols.\
+-   Developer naming conventions may help (e.g., `AddScore(int value)`).
 
-* **Freecam**
-  Free camera controlled via keyboard/mouse. Works even when UnityExplorer UI is hidden.
+### Using IL2CPP Dumper + IDA Pro
 
-* **Clipboard**
-  View/clear current paste value. Copy/paste values between reflection inspectors, enumerables, dictionaries, and other inspector targets.
+1.  Download and extract **IL2CPP Dumper**.\
+2.  Select `gameassembly.dll` and metadata files.\
+3.  Open `gameassembly.dll` in IDA Pro.\
+4.  Load generated scripts (`script.json`, `il2cpp.h`) for symbol
+    recovery.\
+5.  Browse renamed functions for easier reversing.
 
----
+## Developing a Melon (Mod)
 
-## Installation
+### Setup
 
-* **BepInEx**
+-   Create a new **C# Class Library** project in Visual Studio.\
+-   Target **.NET Framework 6.0**.\
+-   Add reference to `MelonLoader.dll`.\
+-   Ensure `AssemblyInfo.cs` exists and configure mod metadata.
 
-  1. Unzip release into a folder.
-  2. Copy `plugins/sinai-dev-UnityExplorer` to `BepInEx/plugins/`.
+### Writing a Basic Mod
 
-     * Note: BepInEx 6 available at [builds.bepinex.dev](https://builds.bepinex.dev).
+-   Inherit from `MelonMod`.\
+-   Override lifecycle methods (e.g., `OnInitializeMelon`).\
+-   Example: print "Hello World" to the in-game console.
 
-* **MelonLoader**
+### Building & Installing
 
-  1. Unzip release.
-  2. Copy DLL from `Mods` folder into MelonLoader `Mods`.
-  3. Copy DLLs from `UserLibs` to MelonLoader `UserLibs`.
-  4. Extract all files into the game root directory. Press **F7** if UI doesn't appear.
+-   Build project → output in `bin/Debug` or `bin/Release`.\
+-   Copy `.dll` into the game root folder.\
+-   Run game to load the mod.
 
-* **Standalone**
-  Requires manual dependency loading (UniverseLib, HarmonyX, MonoMod).
+## Advanced Example: Method Hooking
 
-  1. Load required libraries.
-  2. Start Il2CppAssemblyUnhollower if needed.
-  3. Load UnityExplorer DLL.
-  4. Create instance:
+-   Add references to Harmony, game assembly, and Unhollower.\
+-   Define a target class + method.\
+-   Write a **Prefix Hook** to execute code before the method.\
+-   Modify return values and control execution with `return false`.
 
-  ```csharp
-  UnityExplorer.ExplorerStandalone.CreateInstance();
-  ```
+## Conclusion
 
-  5. Optionally subscribe to logging events.
-
-* **Unity Editor**
-
-  1. Download `UnityExplorer.Editor`.
-  2. Install via Package Manager or manually drag folder into `Assets`.
-  3. Drag `Runtime/UnityExplorer` prefab into scene or create GameObject and add `Explorer Editor Behaviour`.
-
----
-
-## Common Issues & Solutions
-
-* **Config files:**
-
-  * BepInEx: `BepInEx\config\com.sinai.unityexplorer.cfg`
-  * MelonLoader: `UserData\MelonPreferences.cfg`
-  * Standalone: `{DLL_location}\sinai-dev-UnityExplorer\config.cfg`
-
-* **Recommended settings:**
-
-  * `Startup_Delay_Time`: 5–10 seconds to prevent startup corruption.
-  * `Disable_EventSystem_Override`: Set to `true` if input does not work.
-
-For unresolved issues, create an issue on GitHub.
-
----
-
-## Repository & Video Links
-
-* **GitHub Repository**: [GrahamKracker/UnityExplorer](https://github.com/GrahamKracker/UnityExplorer)
-
-  * Forked from: `sinai-dev/UnityExplorer`
-  * License: GPL-3.0
-  * Languages: C# (98.3%), PowerShell (1.7%)
-  * Stars: 171 | Forks: 24
-
-* **Related Video (Info)**:
-
-  * Title: "How to Hack il2cpp Games - MelonLoader Tutorial"
-  * Channel: "Guided Hacking"
-  * Note: Direct YouTube link not provided in sources.
-
----
-
-## Disclaimer
-
-**UnityExplorer** is in no way associated with Unity Technologies. "Unity", Unity logos, and other Unity trademarks are trademarks or registered trademarks of Unity Technologies or its affiliates in the U.S. and elsewhere.
+MelonLoader, combined with tools like Unity Explorer, IL2CPP Dumper, and
+IDA Pro, provides a complete ecosystem for hacking Unity IL2CPP games.
+By understanding IL2CPP and leveraging these tools, modders can inspect,
+reverse engineer, and modify Unity games effectively.
